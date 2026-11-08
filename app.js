@@ -141,6 +141,25 @@ d_puzzle_king|Solve 100 puzzles
 offer|Draw offered
 offer2|Opponent offers a draw. Press Draw to accept.
 analyzing|Analyzing
+ok2|OK
+cancel|Cancel
+accept|Accept
+decline|Decline
+leaveT|Leave the game?
+leaveD|If you leave now, the game counts as a loss.
+leaveL|If you leave now, the game will be discarded.
+leave|Leave
+stay|Stay
+drawReq|Draw offer
+drawReqD|Your opponent offers a draw. Do you accept?
+drawNo|The draw offer was not accepted.
+drawLocal|Do both players agree to a draw?
+resignQ|Do you want to resign?
+save|Save
+rnf|Room not found.
+rfull|The room is full or the game already started.
+rown|This is your own room. Use a different account on the other phone.
+joining|Joining…
 `),ar:parse(`
 home|الرئيسية
 play|لعب
@@ -281,10 +300,29 @@ d_puzzle_king|احلّ 100 لغز
 offer|تم إرسال عرض التعادل
 offer2|الخصم يعرض التعادل. اضغط تعادل للقبول.
 analyzing|جاري التحليل
+ok2|حسنًا
+cancel|إلغاء
+accept|قبول
+decline|رفض
+leaveT|تغادر المباراة؟
+leaveD|لو خرجت الآن هتتحسب عليك خسارة.
+leaveL|لو خرجت الآن المباراة هتتلغي.
+leave|خروج
+stay|ابقَ
+drawReq|عرض تعادل
+drawReqD|خصمك يعرض عليك التعادل. هل توافق؟
+drawNo|لم يتم قبول عرض التعادل.
+drawLocal|هل يتفق اللاعبان على التعادل؟
+resignQ|هل تريد الاستسلام؟
+save|حفظ
+rnf|الغرفة غير موجودة.
+rfull|الغرفة ممتلئة أو المباراة بدأت.
+rown|دي غرفتك أنت. ادخل بحساب مختلف من الموبايل التاني.
+joining|جاري الانضمام…
 `)};
 let S=Object.assign({lang:'ar',theme:'dark',bt:'Forest',ps:'0',snd:'1',coords:'1',hints:'1'},JSON.parse(localStorage.getItem('cs')||'{}'));
 const t=k=>D[S.lang][k]||D.en[k]||k,ic=(n,c)=>`<svg class="ic ${c||''}"><use href="#i-${n}"/></svg>`;
-let user=null,P=null,guest=false,G=null,mode='cpu',pm='cpu',side='w',sel=null,flip=false,over=false,last=null,lvl=2,cfg={b:0,i:0},T={w:0,b:0},tm=null,rp=null,gid=0,room=null,chan=null,ready=false,oppName=null,sfw=null,sfq=Promise.resolve(),pz=null,pStreak=0,hintSq=null,drag=null,REV=null,busy=false,cur='',wantDaily=false,flagging=false,lbc='blitz',am='in';
+let user=null,P=null,guest=false,G=null,mode='cpu',pm='cpu',side='w',sel=null,flip=false,over=false,last=null,lvl=2,cfg={b:0,i:0},T={w:0,b:0},tm=null,rp=null,gid=0,room=null,chan=null,ready=false,oppName=null,sfw=null,sfq=Promise.resolve(),pz=null,pStreak=0,hintSq=null,drag=null,REV=null,busy=false,cur='',wantDaily=false,flagging=false,lbc='blitz',am='in',offerOpen=false,myOffer=false;
 const GL={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'},GO={k:'♔',q:'♕',r:'♖',b:'♗',n:'♘',p:'♙'};
 const TC=[[0,0],[60,0],[120,1],[180,0],[300,0],[600,0],[900,10]],TL=['none','Bullet 1+0','Bullet 2+1','Blitz 3+0','Blitz 5+0','Rapid 10+0','Rapid 15+10'];
 const ACH=[['first_win','medal'],['sharp_mind','bulb'],['warrior','flag'],['unbeatable','bolt'],['master','crown'],['puzzle_king','trophy']];
@@ -298,7 +336,7 @@ function applyS(){const d=document.documentElement;d.lang=S.lang;d.dir=S.lang=='
  const N=[['home','home'],['play','play'],['puzzles','puzzle'],['learn','book'],['leaders','trophy'],['profile','user']];
  $('nav').innerHTML=N.map(n=>`<a href="#${n[0]}" data-r="${n[0]}">${ic(n[1])}${t(n[0])}</a>`).join('');
  $('mm').innerHTML=N.concat([['settings','set']]).map(n=>`<a href="#${n[0]}" data-r="${n[0]}" onclick="$('mm').classList.remove('open')">${ic(n[1])}${t(n[0])}</a>`).join('');
- $('ft').innerHTML=`<div>${['home','play','puzzles','leaders','settings'].map(x=>`<a href="#${x}">${t(x)}</a>`).join('')}</div><a class="btn sm" href="${esc(CFG.more)}" target="_blank" rel="noopener">${t('more')}</a><span>Chess Challenge</span>`;
+ $('ft').innerHTML=`<div>${['home','play','puzzles','leaders','settings'].map(x=>`<a href="#${x}">${t(x)}</a>`).join('')}</div><div class="dd" id="dd"><button class="btn sm" onclick="event.stopPropagation();$('dd').classList.toggle('open')">${ic('globe')}${t('more')}</button><div class="ddm">${CFG.projects.map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(S.lang=='ar'?x.ar:x.en)}</a>`).join('')}</div></div><span>Chess Challenge</span>`;
  document.querySelectorAll('[data-r]').forEach(a=>a.classList.toggle('on',a.dataset.r==cur))}
 function setS(k,v){S[k]=v;localStorage.setItem('cs',JSON.stringify(S));applyS();if(user)sb.from('profiles').update({settings:S}).eq('id',user.id).then(()=>{});
  if(k=='lang'&&!(G&&!over&&cur=='play'))route();else renderBoard()}
@@ -308,8 +346,15 @@ const skel=n=>'<div class="sk"></div>'.repeat(n||2),showUnlocks=l=>(l||[]).forEa
 function beep(f){if(S.snd!='1')return;try{const a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=f;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(.08,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.1);o.start();o.stop(a.currentTime+.1)}catch(e){}}
 async function api(action,body){const{data,error}=await sb.functions.invoke('game',{body:Object.assign({action},body)});
  if(error||(data&&data.error)){let m=data&&data.error;try{m=m||(await error.context.json()).error}catch(e){}toast(m||t('err'),'err');return null}return data}
+function ask(o){return new Promise(res=>{const m=$('md'),inp=o.input!=null;
+ m.innerHTML=`<div class="mbox"><h3>${esc(o.title)}</h3>${o.text?`<p>${esc(o.text)}</p>`:''}${inp?`<input id="mi" value="${esc(o.input)}" maxlength="24">`:''}<div class="row"><button class="btn p" id="mo">${esc(o.ok||t('ok2'))}</button><button class="btn" id="mc">${esc(o.cancel||t('cancel'))}</button></div></div>`;
+ m.classList.remove('hide');const done=v=>{m.classList.add('hide');m.innerHTML='';res(v)};
+ $('mo').onclick=()=>done(inp?$('mi').value:true);$('mc').onclick=()=>done(inp?null:false);if(!o.sticky)m.onclick=e=>{if(e.target==m)done(inp?null:false)};
+ if(inp){$('mi').focus();$('mi').onkeydown=e=>{if(e.key=='Enter')$('mo').click()}}})}
+const PD={elo_bullet:800,elo_blitz:800,elo_rapid:800,peak:800,games:0,wins:0,losses:0,draws:0,streak:0,xp:0,solves:0};
+const normP=d=>Object.assign({},PD,Object.fromEntries(Object.entries(d||{}).filter(x=>x[1]!=null)),{created_at:(d&&d.created_at)||new Date().toISOString(),username:(d&&d.username)||'Player'});
 /* ---------- auth ---------- */
-async function loadProf(){if(!user)return;const{data}=await sb.from('profiles').select('*').eq('id',user.id).single();if(data)P=data}
+async function loadProf(){if(!user)return;const{data,error}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();if(error)toast(error.message,'err');P=normP(data||{username:user.email.split('@')[0]})}
 async function submitAuth(){const email=$('em').value.trim(),password=$('pw').value;
  const r=am=='up'?await sb.auth.signUp({email,password,options:{data:{username:$('un').value.trim()||email.split('@')[0]}}}):await sb.auth.signInWithPassword({email,password});
  if(r.error)return toast(r.error.message,'err');if(!r.data.session)return toast(t('sent'),'warn');
@@ -319,7 +364,15 @@ function asGuest(){guest=true;P={username:'Guest',elo_bullet:800,elo_blitz:800,e
 async function logout(){await sb.auth.signOut();user=null;P=null;guest=false;location.hash='auth';route()}
 /* ---------- router ---------- */
 const go=(r,m)=>{if(m)pm=m;if(location.hash=='#'+r)route();else location.hash=r};
+const inGame=()=>cur=='play'&&G&&!over&&(mode=='online'?ready:G.history().length>0);
+const active=()=>cur=='play'&&G&&!over&&$('gp')&&!$('gp').classList.contains('hide');
+function segLock(){const s=$('seg');if(s)s.classList.toggle('lock',!!active())}
+async function abandon(){if(mode=='online')await api('resign',{code:room});else if(mode=='cpu'&&G.history().length>=2){const rc=side;await conclude(rc=='w'?'b':'w','resign',null,rc)}over=true;clearInterval(tm);segLock()}
+const leaveAsk=()=>ask({title:t('leaveT'),text:t(mode=='local'?'leaveL':'leaveD'),ok:t('leave'),cancel:t('stay')});
+async function switchMode(m){if(m==pm)return;if(inGame()){if(!await leaveAsk())return;await abandon()}leave();clearInterval(tm);gid++;G=null;over=false;pm=m;route()}
+window.addEventListener('beforeunload',e=>{if(inGame()){e.preventDefault();e.returnValue=''}});
 function route(){let r=location.hash.slice(1)||'home';const anon=!user&&!guest;if(anon)r='auth';if(!R[r])r='home';
+ if(inGame()&&r!=cur){const tgt=location.hash;history.replaceState(null,'','#play');leaveAsk().then(async ok=>{if(!ok)return;await abandon();location.hash=tgt});return}
  document.body.classList.toggle('anon',anon);
  if(cur!=r){clearInterval(tm);gid++;if(cur=='play')leave();if(r!='game'&&r!='learn')rp=null;G=null;over=false;sel=null;last=null;mode=r=='puzzles'?'puzzle':pm}
  cur=r;$('page').innerHTML=R[r].h();applyS();window.scrollTo(0,0);if(R[r].i)R[r].i()}
@@ -354,7 +407,7 @@ function tick(){if(over||!G||!cfg.b)return;const c=G.turn();if(mode=='online'){i
  T[c]--;clk();if(T[c]<=0)conclude(c=='w'?'b':'w','time',c)}
 function readTC(){const v=$('tc').value;if(v=='c')return{b:Math.max(1,+$('cm').value||5)*60,i:Math.max(0,+$('ci').value||0)};return{b:TC[+v][0],i:TC[+v][1]}}
 function names(){if(!$('nt'))return;let a,b;if(mode=='cpu'){a=t('cpu')+' · '+t(['','easy','medium','hard'][lvl]);b=P.username}else if(mode=='online'){a=oppName||t('opp');b=P.username}else{a=t(flip?'white':'black');b=t(flip?'black':'white')}$('nt').textContent=a;$('nb').textContent=b}
-function showGP(){$('setup').classList.add('hide');$('gp').classList.remove('hide')}
+function showGP(){$('setup').classList.add('hide');$('gp').classList.remove('hide');segLock()}
 function startGame(){mode=pm;clearInterval(tm);gid++;over=false;sel=null;last=null;rp=null;G=new Chess();cfg=readTC();T={w:cfg.b,b:cfg.b};
  if(mode=='cpu'){lvl=+$('lv').value;const c=$('co').value;side=c=='r'?(Math.random()<.5?'w':'b'):c}else side='w';
  flip=mode=='cpu'&&side=='b';showGP();names();$('msg').textContent='';if(cfg.b)tm=setInterval(tick,1000);renderBoard();clk();actions();if(mode=='cpu'&&side=='b')ai()}
@@ -362,18 +415,27 @@ function actions(done){const b=(f,i,l)=>`<button class="btn" onclick="${f}">${ic
  $('act').innerHTML=done?b(mode=='online'?'route()':'startGame()','refresh','rematch')+b('openReview(G.history())','eye','review')+b('flipBoard()','flip','flip')
   :b('resign()','flag','resign')+(mode!='cpu'?b('drawBtn()','eq','draw'):'')+(mode=='cpu'&&!cfg.b?b('takeback()','undo','undo'):'')+b('flipBoard()','flip','flip')}
 function flipBoard(){flip=!flip;if(mode=='local')names();renderBoard();clk()}
-function resign(){if(over)return;if(mode=='online')return api('resign',{code:room}).then(r=>r&&onRoom(r.room));const rc=mode=='local'?G.turn():side;conclude(rc=='w'?'b':'w','resign',null,rc)}
-function drawBtn(){if(over)return;if(mode=='online')api('draw',{code:room}).then(r=>{if(r){toast(t('offer'));onRoom(r.room)}});else conclude('d','draw')}
+async function resign(){if(over)return;if(!await ask({title:t('resign'),text:t('resignQ'),ok:t('resign'),cancel:t('cancel')}))return;
+ if(mode=='online')return api('resign',{code:room}).then(r=>r&&onRoom(r.room));const rc=mode=='local'?G.turn():side;conclude(rc=='w'?'b':'w','resign',null,rc)}
+async function drawBtn(){if(over)return;if(mode=='online'){const r=await api('draw',{code:room});if(r){myOffer=r.room.draw_offer==side;toast(t('offer'));onRoom(r.room)}}
+ else if(await ask({title:t('draw'),text:t('drawLocal'),ok:t('accept'),cancel:t('cancel')}))conclude('d','draw')}
 function takeback(){if(over||busy)return;G.undo();if(G.turn()!=side)G.undo();last=null;sel=null;renderBoard();clk()}
-async function conclude(res,reason,fc,rc){over=true;clearInterval(tm);clk();beep(res==side?700:260);
+async function conclude(res,reason,fc,rc){over=true;clearInterval(tm);clk();segLock();beep(res==side?700:260);
  const w=mode=='local'?t(res=='d'?'drawn':res=='w'?'wwin':'bwin'):res=='d'?t('drawn'):res==side?t('win'):t('lose');
  $('msg').innerHTML=esc(w);actions(true);if(guest||mode=='puzzle')return;
  const r=await api('finish',{mode,level:lvl,color:side,tc:cfg,moves:G.history(),resigned:reason=='resign',resigner:rc,flagged:fc||null,draw:reason=='draw'});
- if(r&&r.profile){P=r.profile;$('msg').innerHTML=esc(w)+` · ${t('rating')} ${r.delta>=0?'+':''}${r.delta}`;hdr();showUnlocks(r.unlocked)}}
+ if(r&&r.profile){P=normP(r.profile);$('msg').innerHTML=esc(w)+` · ${t('rating')} ${r.delta>=0?'+':''}${r.delta}`;hdr();showUnlocks(r.unlocked)}}
 /* ---------- online ---------- */
 function leave(){if(chan){sb.removeChannel(chan);chan=null}room=null;ready=false;oppName=null}
-async function createRoom(){const c=readTC(),r=await api('create',{base:c.b,inc:c.i});if(r)enterRoom(r.code,r.color,c,null)}
-async function joinRoom(){const code=$('rc').value.trim().toUpperCase();if(!code)return;const r=await api('join',{code});if(r)enterRoom(code,r.color,{b:r.room.tc_base,i:r.room.tc_inc},r.room)}
+async function createRoom(){const b=$('crb');b.disabled=true;try{const c=readTC(),r=await api('create',{base:c.b,inc:c.i});if(r)enterRoom(r.code,r.color,c,null)}catch(e){toast(e.message||t('err'),'err')}finally{b.disabled=false}}
+async function joinRoom(){const b=$('jb'),je=$('je');je.textContent='';const code=$('rc').value.trim().toUpperCase();$('rc').blur();
+ const fail=m=>{je.textContent=m;toast(m,'err')};if(code.length<4)return fail(t('code'));b.disabled=true;
+ try{const{data:row,error}=await sb.from('rooms').select('*').eq('code',code).maybeSingle();if(error)return fail(error.message);if(!row)return fail(t('rnf'));
+  const mine=row.white==user.id||row.black==user.id,c={b:row.tc_base||0,i:row.tc_inc||0};
+  if(mine){if(row.status=='playing')return enterRoom(code,row.white==user.id?'w':'b',c,row);return fail(t(row.status=='waiting'?'rown':'rfull'))}
+  if(row.status!='waiting')return fail(t('rfull'));
+  const r=await api('join',{code});if(r)enterRoom(code,r.color,{b:r.room.tc_base,i:r.room.tc_inc},r.room)}
+ catch(e){fail(e.message||t('err'))}finally{b.disabled=false}}
 function enterRoom(code,color,c,row){mode='online';room=code;side=color;flip=color=='b';cfg=c;G=new Chess();over=false;ready=!!row;sel=null;last=null;T={w:c.b,b:c.b};oppName=null;
  showGP();clearInterval(tm);tm=setInterval(tick,1000);if(chan)sb.removeChannel(chan);
  chan=sb.channel('r'+code).on('postgres_changes',{event:'UPDATE',schema:'public',table:'rooms',filter:'code=eq.'+code},p=>onRoom(p.new)).subscribe();
@@ -383,8 +445,10 @@ function onRoom(r){if(!G||r.code!=room)return;if(r.white&&r.black&&!ready){ready
  const ms=r.moves||[];if(ms.join()!=G.history().join()){G=new Chess();ms.forEach(m=>G.move(m));const h=G.history({verbose:true}).pop();last=h?[h.from,h.to]:null;sel=null;beep(440)}
  T={w:Math.round(r.w_time/1000),b:Math.round(r.b_time/1000)};if(r.status=='playing'&&cfg.b)T[G.turn()]-=Math.round((Date.now()-new Date(r.last_move_at))/1000);
  renderBoard();clk();
- if(r.status=='finished'&&!over){over=true;clearInterval(tm);const res=r.result;$('msg').textContent=res=='d'?t('drawn'):res==side?t('win'):t('lose');actions(true);loadProf().then(hdr)}
- else if(r.draw_offer&&r.draw_offer!=side&&!over)$('msg').textContent=t('offer2')}
+ if(r.status=='finished'&&!over){over=true;clearInterval(tm);offerOpen=false;myOffer=false;$('md').classList.add('hide');const res=r.result;$('msg').textContent=res=='d'?t('drawn'):res==side?t('win'):t('lose');actions(true);segLock();loadProf().then(hdr)}
+ else if(r.status=='playing'&&!over){
+  if(r.draw_offer&&r.draw_offer!=side){if(!offerOpen){offerOpen=true;ask({title:t('drawReq'),text:t('drawReqD'),ok:t('accept'),cancel:t('decline'),sticky:true}).then(async ok=>{offerOpen=false;if(over)return;const x=await api(ok?'draw':'decline',{code:room});if(x)onRoom(x.room)})}}
+  else{if(offerOpen){offerOpen=false;$('md').classList.add('hide')}if(r.draw_offer==side)myOffer=true;else if(myOffer){myOffer=false;toast(t('drawNo'),'warn')}}}}
 /* ---------- Stockfish ---------- */
 function sfInit(){return sfw||(sfw=fetch('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js').then(r=>r.text()).then(x=>{const w=new Worker(URL.createObjectURL(new Blob([x],{type:'text/javascript'})));w.postMessage('uci');return w}))}
 function sf(fen,o){return sfq=sfq.then(async()=>{const w=await sfInit();return new Promise(res=>{let cp=0;
@@ -403,7 +467,7 @@ function puzzleMove(m){const u=m.from+m.to+(m.promotion||''),ex=pz.sol[pz.i];
   setTimeout(()=>{const o=pz.sol[pz.i],mm=G.move({from:o.slice(0,2),to:o.slice(2,4),promotion:o[4]||'q'});pz.i++;last=[mm.from,mm.to];busy=false;renderBoard();if(pz.i>=pz.sol.length)solvedP();else $('msg').textContent=t('ok')},450)}
  else{pz.fails++;pStreak=0;$('ps2').textContent=t('streak')+' 0';$('msg').textContent=t('bad');busy=true;setTimeout(()=>{G.undo();last=null;busy=false;renderBoard()},700)}}
 async function solvedP(){over=true;if(!pz.fails)pStreak++;$('ps2').textContent=t('streak')+' '+pStreak;$('msg').textContent=t('solved');beep(660);
- if(!guest){const r=await api('puzzle',{id:pz.id});if(r){P=r.profile;hdr();showUnlocks(r.unlocked)}}}
+ if(!guest){const r=await api('puzzle',{id:pz.id});if(r){P=normP(r.profile);hdr();showUnlocks(r.unlocked)}}}
 function puzHint(){if(!pz||over)return;hintSq=pz.sol[pz.i].slice(0,2);renderBoard()}
 function puzSol(){if(!pz||over)return;const g=new Chess(G.fen()),o=[];for(let k=pz.i;k<pz.sol.length;k++){const u=pz.sol[k],m=g.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'});if(m)o.push(m.san)}pStreak=0;$('ps2').textContent=t('streak')+' 0';$('msg').textContent=o.join(' ');pz.fails++}
 /* ---------- review / analysis ---------- */
@@ -427,7 +491,7 @@ async function runReview(){const mv=REV||[];if(!mv.length){$('page').innerHTML=`
 /* ---------- pages ---------- */
 const modeCard=(m,i,l)=>`<div class="mode" onclick="go('play','${m}')">${ic(i)}<b>${t(l)}</b><span>${t(l+'D')}</span></div>`;
 const tcSel=()=>`<div class="row"><div class="fld"><label>${t('clock')}</label><select id="tc" onchange="$('cx').classList.toggle('hide',this.value!='c')">${TL.map((x,i)=>`<option value="${i}">${i?x:t('none')}</option>`).join('')}<option value="c">${t('custom')}</option></select></div></div><div class="row hide" id="cx"><div class="fld"><label>${t('min')}</label><input id="cm" type="number" min="1" value="5"></div><div class="fld"><label>${t('incr')}</label><input id="ci" type="number" min="0" value="0"></div></div>`;
-async function boardTop(c,el){const{data}=await sb.from('profiles').select('username,elo_'+c).order('elo_'+c,{ascending:false}).limit(20);const rows=data||[];
+async function boardTop(c,el){const{data,error}=await sb.from('profiles').select('username,elo_'+c).order('elo_'+c,{ascending:false}).limit(20);if(error)toast(error.message,'err');const rows=data||[];
  if(!rows.length){el.innerHTML=`<div class="empty">${t('empty')}</div>`;return rows}return rows}
 const R={
 auth:{h:()=>`<div class="auth card"><div class="seg"><button class="btn ${am=='in'?'on':''}" onclick="am='in';route()">${t('login')}</button><button class="btn ${am=='up'?'on':''}" onclick="am='up';route()">${t('signup')}</button></div>
@@ -438,9 +502,9 @@ home:{h:()=>`<section class="hero"><h1>${t('hero1')}</h1><p>${t('hero2')}</p><di
  <h2>${t('daily')}</h2><div class="card row"><div><h3>${t('daily')}</h3><p style="margin:0">${t('dailyD')}</p></div><button class="btn p" style="flex:none" onclick="wantDaily=true;go('puzzles')">${t('solve')}</button></div>
  <h2>${t('top')}</h2><div class="card" id="top">${skel(1)}</div>`,
  i:async()=>{const el=$('top'),r=await boardTop('blitz',el);if(r.length)el.innerHTML=r.slice(0,3).map((x,i)=>`<div class="li"><span>${ic(i?'medal':'crown')} ${esc(x.username)}</span><b>${x.elo_blitz}</b></div>`).join('')}},
-play:{h:()=>`<div class="seg">${[['cpu','cpu','vscpu'],['local','users','local'],['online','globe','online']].map(x=>`<button class="btn ${pm==x[0]?'on':''}" onclick="pm='${x[0]}';route()">${ic(x[1])}${t(x[2])}</button>`).join('')}</div>
- <div class="card" id="setup">${pm=='cpu'?`<div class="row"><div class="fld"><label>${t('level')}</label><select id="lv"><option value="1">${t('easy')}</option><option value="2" selected>${t('medium')}</option><option value="3">${t('hard')}</option></select></div><div class="fld"><label>${t('color')}</label><select id="co"><option value="w">${t('white')}</option><option value="b">${t('black')}</option><option value="r">${t('rand')}</option></select></div></div>`:''}
- ${tcSel()}${pm=='online'?(guest?`<p>${t('needlogin')}</p>`:`<div class="row"><button class="btn p" onclick="createRoom()">${ic('globe')}${t('create')}</button></div><div class="row"><input id="rc" placeholder="${t('code')}" maxlength="5" style="text-transform:uppercase"><button class="btn" style="flex:none" onclick="joinRoom()">${t('join')}</button></div>`):`<div class="row"><button class="btn p" onclick="startGame()">${ic('play')}${t('start')}</button></div>`}</div>
+play:{h:()=>`<div class="seg" id="seg">${[['cpu','cpu','vscpu'],['local','users','local'],['online','globe','online']].map(x=>`<button class="btn ${pm==x[0]?'on':''}" onclick="switchMode('${x[0]}')">${ic(x[1])}${t(x[2])}</button>`).join('')}</div>
+ <div class="card" id="setup">${(m=>`<div class="mhead">${ic(m[0])}<b>${t(m[1])}</b><small>${t(m[1]+'D')}</small></div>`)({cpu:['cpu','vscpu'],local:['users','local'],online:['globe','online']}[pm])}${pm=='cpu'?`<div class="row"><div class="fld"><label>${t('level')}</label><select id="lv"><option value="1">${t('easy')}</option><option value="2" selected>${t('medium')}</option><option value="3">${t('hard')}</option></select></div><div class="fld"><label>${t('color')}</label><select id="co"><option value="w">${t('white')}</option><option value="b">${t('black')}</option><option value="r">${t('rand')}</option></select></div></div>`:''}
+ ${tcSel()}${pm=='online'?(guest?`<p>${t('needlogin')}</p><button class="btn p" onclick="logout()">${t('login')}</button>`:`<div class="row"><button class="btn p" id="crb" onclick="createRoom()">${ic('globe')}${t('create')}</button></div><div class="row"><input id="rc" placeholder="${t('code')}" maxlength="5" style="text-transform:uppercase"><button class="btn" id="jb" style="flex:none" onclick="joinRoom()">${t('join')}</button></div><div class="err" id="je"></div>`):`<div class="row"><button class="btn p" onclick="startGame()">${ic('play')}${t('start')}</button></div>`}</div>
  <div id="gp" class="hide"><div class="bar"><span id="nt"></span><span class="clock" id="ct"></span></div><div id="board"></div><div class="bar"><span id="nb"></span><span class="clock" id="cb"></span></div><div class="actions" id="act"></div><div class="msg" id="msg"></div><div class="mvl" id="ml"></div></div>`},
 puzzles:{h:()=>`<div class="card"><div class="row"><div class="fld"><label>${t('diff')}</label><select id="df">${['easiest','easier','normal','harder','hardest'].map(x=>`<option value="${x}" ${x=='normal'?'selected':''}>${t(x)}</option>`).join('')}</select></div><div class="fld"><label>${t('theme')}</label><select id="an">${[['mix','mix'],['mateIn1','m1'],['mateIn2','m2'],['fork','fork']].map(x=>`<option value="${x[0]}">${t(x[1])}</option>`).join('')}</select></div></div></div>
  <div class="bar" style="margin-top:10px"><span id="pi"></span><span class="clock" id="ps2">${t('streak')} ${pStreak}</span></div><div id="board"></div><div class="msg" id="msg"></div>
@@ -471,7 +535,7 @@ settings:{h:()=>{const sel=(k,o)=>`<select onchange="setS('${k}',this.value)">${
  return `<div class="card">${[['lang',sel('lang',[['ar','العربية'],['en','English']])],['theme',sel('theme',[['dark',t('dark')],['light',t('light')]])],['sound',sel('snd',oo)],['bt',sel('bt',['Forest','Classic','Slate'].map(x=>[x,x]))],['ps',sel('ps',[['0',t('solid')],['1',t('outl')]])],['coords',sel('coords',oo)],['hints',sel('hints',oo)]].map(x=>`<div class="li"><span>${t(x[0])}</span><div style="width:150px">${x[1]}</div></div>`).join('')}</div>`}},
 game:{h:()=>`<div id="board"></div><div class="row c" id="rp"></div><div class="msg" id="msg"></div><div id="rep"></div>`,i:()=>runReview()}};
 function showOpen(i){$('ob').classList.remove('hide');flip=false;rp={mv:OPEN[i][2].split(' '),i:0,g:null,info:null};rstep(0);$('ob').scrollIntoView({behavior:'smooth'})}
-async function editName(){const n=(prompt(t('uname'),P.username)||'').trim();if(!n)return;const{error}=await sb.from('profiles').update({username:n.slice(0,24)}).eq('id',user.id);if(error)return toast(error.message,'err');await loadProf();hdr();route()}
+async function editName(){const n=await ask({title:t('uname'),input:P.username,ok:t('save'),cancel:t('cancel')});if(!n||!n.trim())return;const{error}=await sb.from('profiles').update({username:n.trim().slice(0,24)}).eq('id',user.id);if(error)return toast(error.message,'err');await loadProf();hdr();route()}
 /* ---------- boot ---------- */
-window.addEventListener('hashchange',route);
+window.addEventListener('hashchange',route);document.addEventListener('click',()=>{const d=$('dd');if(d)d.classList.remove('open')});
 (async()=>{const{data}=await sb.auth.getSession();if(data.session){user=data.session.user;await loadProf();if(P&&P.settings)S=Object.assign(S,P.settings)}applyS();route()})();
