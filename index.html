@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chess Challenge</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+</head><body>
+<header><div class="logo" onclick="home()">♞ Chess Challenge</div><div><span class="chip" id="elo"></span> <button onclick="sound=!sound;this.textContent=sound?'🔊':'🔇'">🔊</button> <button onclick="logout()">Exit</button></div></header>
+<div id="auth" class="card hide">
+<h1 style="margin-top:0">Sign in</h1><p>Save your progress, rating and games.</p>
+<input id="un" placeholder="Username (sign up only)"><input id="em" type="email" placeholder="Email"><input id="pw" type="password" placeholder="Password">
+<div class="err" id="err"></div>
+<div class="row"><button class="p" onclick="auth('in')">Sign in</button><button onclick="auth('up')">Sign up</button><button onclick="guest()">Guest</button></div></div>
+<main id="app" class="hide">
+<div id="home">
+<h1>Master Your Game</h1><p id="hi"></p>
+<div class="card"><b style="font-size:20px">Play Chess</b><p>Jump straight to the board.</p>
+<div class="row"><select id="lvl"><option value="1">Easy</option><option value="2" selected>Medium</option><option value="3">Hard</option></select>
+<select id="tc"><option value="0">No clock</option><option value="60">Bullet 1 min</option><option value="300">Blitz 5 min</option><option value="600">Rapid 10 min</option></select>
+<select onchange="theme(this.value)"><option>Forest</option><option>Classic</option><option>Slate</option></select>
+<select onchange="outline=this.value=='1';render()"><option value="0">Solid pieces</option><option value="1">Outline pieces</option></select></div>
+<button class="p" onclick="start('cpu')">Play now</button></div>
+<h2>Game Modes</h2><div class="grid">
+<div class="mode" onclick="start('cpu')"><b>Play Computer</b><span>Stockfish, 3 levels</span></div>
+<div class="mode" onclick="start('local')"><b>Local Play</b><span>Two players, one device</span></div>
+<div class="mode" onclick="createRoom()"><b>Create Online Room</b><span>Share the code with a friend</span></div>
+<div class="mode" onclick="joinRoom()"><b>Join Online Room</b><span>Enter a friend’s code</span></div></div>
+<h2>Daily Puzzle</h2><div class="card"><p id="pz"></p><button class="p" onclick="puzzle()">Solve today</button></div>
+<h2>Learn Chess</h2><div class="card"><p>Openings: control the center, develop knights before bishops, castle early.<br>Tactics: look for forks, pins and back-rank mates on every move.</p></div>
+<h2>Achievements</h2><div class="card" id="ach"></div>
+<h2>Game History</h2><div class="card" id="hist"></div>
+<h2>Leaderboard</h2><div class="card" id="lb"></div>
+</div>
+<div id="view" class="hide">
+<div class="row"><button onclick="home()">← Back</button><button onclick="start(mode)" id="again">New game</button><button onclick="flip=!flip;render()">Flip</button><button id="anb" class="p hide" onclick="analyze(G.history())">Analyze</button></div>
+<div class="bar"><span id="nt"></span><span class="clock" id="ct"></span></div>
+<div id="board"></div>
+<div class="bar"><span id="nb"></span><span class="clock" id="cb"></span></div>
+<div class="msg" id="msg"></div>
+<div class="row" id="rp" style="justify-content:center"></div>
+<div id="rep"></div>
+</div></main>
+<footer>Chess Challenge</footer>
+<script src="app.js"></script>
+</body></html>
